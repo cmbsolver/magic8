@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #006400; /* Requirement 7: felt green */
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Requirement 8: pool bumpers */
+        .bumper {
+            position: absolute;
+            background-color: #3d2b1f; /* dark wood color */
+            z-index: 5;
+        }
+        .top-bumper { top: 0; left: 0; width: 100%; height: 30px; border-bottom: 8px solid #2d1b0f; }
+        .bottom-bumper { bottom: 0; left: 0; width: 100%; height: 30px; border-top: 8px solid #2d1b0f; }
+        .left-bumper { top: 0; left: 0; width: 30px; height: 100%; border-right: 8px solid #2d1b0f; }
+        .right-bumper { top: 0; right: 0; width: 30px; height: 100%; border-left: 8px solid #2d1b0f; }
+
+        #ball-container {
+            width: 500px;
+            height: 500px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s linear;
+            z-index: 10;
+        }
+        
+        #magic8ball {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Requirement 5 & 6: blue liquid, multisided dice appearance */
+        #message-window {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle at 30% 30%, #0000ff 0%, #000033 100%); /* Requirement 6: round and blue */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white; /* Requirement 6: text will be white */
+            padding: 50px;
+            font-size: 24px;
+            line-height: 1.2;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+            pointer-events: none;
+            box-sizing: border-box;
+            z-index: 15;
+        }
+        
+        #message {
+            width: 100%;
+            word-wrap: break-word; /* Requirement 6: text will wrap */
+        }
+
+        #shake-btn {
+            position: absolute;
+            bottom: 40px;
+            padding: 15px 30px;
+            font-size: 20px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 20;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        #shake-btn:hover {
+            background-color: #c0392b;
+        }
+        #shake-btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .rolling {
+            animation: spin 0.2s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bumper top-bumper"></div>
+    <div class="bumper bottom-bumper"></div>
+    <div class="bumper left-bumper"></div>
+    <div class="bumper right-bumper"></div>
+
+    <div id="ball-container">
+        <!-- Requirement 2: SVG Magic 8 Ball -->
+        <svg id="magic8ball" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <radialGradient id="ballGradient" cx="30%" cy="30%" r="70%">
+                    <stop offset="0%" stop-color="#444" />
+                    <stop offset="100%" stop-color="black" />
+                </radialGradient>
+            </defs>
+            <circle cx="50" cy="50" r="48" fill="url(#ballGradient)" />
+            <circle id="center-circle" cx="50" cy="50" r="22" fill="#222" />
+            <text id="eight-text" x="50" y="62" font-size="36" text-anchor="middle" fill="white" font-weight="bold">8</text>
+        </svg>
+        <div id="message-window">
+            <span id="message"></span>
+        </div>
+    </div>
+
+    <button id="shake-btn">Shake</button>
+
+    <script>
+        const ball = document.getElementById('ball-container');
+        const messageWindow = document.getElementById('message-window');
+        const messageText = document.getElementById('message');
+        const eightText = document.getElementById('eight-text');
+        const centerCircle = document.getElementById('center-circle');
+        const shakeBtn = document.getElementById('shake-btn');
+
+        shakeBtn.addEventListener('click', shake);
+
+        async function shake() {
+            if (shakeBtn.disabled) return;
+            shakeBtn.disabled = true;
+            
+            // Hide previous message if any
+            messageWindow.style.opacity = '0';
+            setTimeout(() => {
+                eightText.style.display = 'block';
+                centerCircle.setAttribute('fill', '#222');
+            }, 500);
+
+            try {
+                const response = await fetch('/shake');
+                const data = await response.json();
+                
+                // Requirement 9 & 10: Roll around hitting bumpers based on backend path
+                await animateRolling(data.path);
+
+                // Requirement 5: flip over and show message
+                // Quick "flip" effect
+                ball.style.transition = 'transform 0.5s ease-in-out';
+                ball.style.transform = 'translate(-50%, -50%) rotateY(180deg)';
+                
+                setTimeout(() => {
+                    eightText.style.display = 'none';
+                    centerCircle.setAttribute('fill', 'transparent');
+                    messageText.innerText = data.message;
+                    messageWindow.style.opacity = '1';
+                    ball.style.transform = 'translate(-50%, -50%) rotateY(0deg)';
+                }, 250);
+
+            } catch (error) {
+                console.error('Error shaking ball:', error);
+            } finally {
+                setTimeout(() => {
+                    shakeBtn.disabled = false;
+                    ball.style.transition = 'transform 0.1s linear';
+                }, 3000);
+            }
+        }
+
+        function animateRolling(path) {
+            return new Promise((resolve) => {
+                let currentStep = 0;
+                ball.classList.add('rolling');
+                
+                function nextPoint() {
+                    if (currentStep >= path.length) {
+                        ball.classList.remove('rolling');
+                        // Ensure final position is centered
+                        ball.style.left = '50%';
+                        ball.style.top = '50%';
+                        ball.style.transform = 'translate(-50%, -50%)';
+                        setTimeout(resolve, 500);
+                        return;
+                    }
+
+                    const point = path[currentStep];
+                    const bumperSize = 38; // 30px height/width + 8px border
+                    const ballRadius = 250; // Half of 500px width/height
+
+                    let x, y;
+                    // Map 0-100 to viewport with bumper margins
+                    // 0 is left/top bumper, 100 is right/bottom bumper
+                    if (point.x === 0) {
+                        x = bumperSize + ballRadius;
+                    } else if (point.x === 100) {
+                        x = window.innerWidth - bumperSize - ballRadius;
+                    } else {
+                        x = bumperSize + ballRadius + (point.x / 100) * (window.innerWidth - 2 * (bumperSize + ballRadius));
+                    }
+
+                    if (point.y === 0) {
+                        y = bumperSize + ballRadius;
+                    } else if (point.y === 100) {
+                        y = window.innerHeight - bumperSize - ballRadius;
+                    } else {
+                        y = bumperSize + ballRadius + (point.y / 100) * (window.innerHeight - 2 * (bumperSize + ballRadius));
+                    }
+
+                    ball.style.left = x + 'px';
+                    ball.style.top = y + 'px';
+                    
+                    currentStep++;
+                    setTimeout(nextPoint, 600); // Time between hits
+                }
+
+                nextPoint();
+            });
+        }
+    </script>
+</body>
+</html>
