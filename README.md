@@ -21,7 +21,7 @@ To spin up the application using Docker, run:
 docker run -d -p 3000:3000 --name magic8 quay.io/cmbsolver/magic8
 ```
 
-You can then access the application at `http://localhost:3000`.
+You can then access the application at `http://127.0.0.1:3000`.
 
 ### Using Podman
 
@@ -31,7 +31,7 @@ To spin up the application using Podman, run:
 podman run -d -p 3000:3000 --name magic8 quay.io/cmbsolver/magic8
 ```
 
-You can then access the application at `http://localhost:3000`.
+You can then access the application at `http://127.0.0.1:3000`.
 
 ## Development
 
