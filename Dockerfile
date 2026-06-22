@@ -32,7 +32,6 @@ COPY --from=builder /app/magic8 .
 # Copy runtime assets required by the application
 # Based on your main.go, these are necessary:
 COPY --from=builder /app/views ./views
-COPY --from=builder /app/public ./public
 
 # Expose the port the app listens on (from app.Listen(":3000"))
 EXPOSE 3000
